@@ -30,4 +30,4 @@ FinanceFlow is a Personal Finance Management System built with Java Spring Boot.
 
 ## Status
 
-🚧 In Development
+In Development
