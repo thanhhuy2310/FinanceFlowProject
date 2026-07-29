@@ -1,0 +1,7 @@
+CREATE  table providers(
+    id BIGSERIAL PRIMARY KEY NOT NULL ,
+    name VARCHAR(100) unique NOT NULL,
+    logo_url varchar(255) ,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
