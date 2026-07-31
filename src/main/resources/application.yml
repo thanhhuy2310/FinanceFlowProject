@@ -20,6 +20,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+jwt:
+  secret: financeflow-secret-key-for-jwt-authentication-2026
+  expiration: 86400000
 
 server:
   port: 8080
