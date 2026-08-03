@@ -20,5 +20,6 @@ public interface ImportBatchMapper {
     @Mapping(target = "transactions", ignore = true)
     ImportBatch toEntity(ImportBatchRequest request);
 
+    @Mapping(target = "failures", ignore = true)
     ImportBatchResponse toResponse(ImportBatch importBatch);
 }

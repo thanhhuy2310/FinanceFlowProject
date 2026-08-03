@@ -20,4 +20,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body((ice.getMessage()));
     }
 
+    @ExceptionHandler(CsvImportException.class)
+    public ResponseEntity<String> handleCsvImport(CsvImportException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    }
+
 }

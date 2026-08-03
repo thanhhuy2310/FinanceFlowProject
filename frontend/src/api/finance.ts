@@ -22,4 +22,9 @@ export const financeApi = {
   importBatches: () => unwrap<ImportBatch[]>(api.get("/api/import-batches")),
   createImportBatch: (payload: ImportBatchPayload) => unwrap<ImportBatch>(api.post("/api/import-batches", payload)),
   deleteImportBatch: (id: number) => unwrap<void>(api.delete(`/api/import-batches/${id}`)),
+  importCsv: (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return unwrap<ImportBatch>(api.post(`/api/import-batches/${id}/import`, formData));
+  },
 };

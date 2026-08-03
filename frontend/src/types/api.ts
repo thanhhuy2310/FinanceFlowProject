@@ -77,6 +77,12 @@ export type Dashboard = {
 };
 
 export type ImportBatchStatus = "PENDING" | "COMPLETED" | "FAILED";
+export type ImportRowFailure = {
+  id: number;
+  rowNumber: number;
+  errorMessage: string;
+  createdAt: string;
+};
 export type ImportBatch = {
   id: number;
   fileName: string;
@@ -86,5 +92,6 @@ export type ImportBatch = {
   failedRows: number;
   status: ImportBatchStatus;
   errorMessage?: string | null;
+  failures: ImportRowFailure[];
 };
 export type ImportBatchPayload = { fileName: string };

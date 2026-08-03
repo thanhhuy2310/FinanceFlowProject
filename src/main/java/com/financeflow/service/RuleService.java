@@ -59,14 +59,23 @@ public class RuleService {
 
     @Transactional(readOnly = true)
     public Optional<Category> findMatchingCategory(String description) {
-        if (description == null || description.isBlank()) {
+        User currentUser = getCurrentUser();
+        List<Rule> rules = ruleRepository.findByUserIdAndIsActiveTrueOrderByPriorityAsc(currentUser.getId());
+        return matchCategory(rules, description);
+    }
+
+    /**
+     * Returns the category of the first active rule (ordered by priority ascending)
+     * whose keyword is contained in the description, if any.
+     */
+    public Optional<Category> matchCategory(List<Rule> rules, String description) {
+        if (description == null || description.isBlank() || rules == null || rules.isEmpty()) {
             return Optional.empty();
         }
 
-        User currentUser = getCurrentUser();
         String normalizedDescription = description.toLowerCase(Locale.ROOT);
 
-        return ruleRepository.findByUserIdAndIsActiveTrueOrderByPriorityAsc(currentUser.getId()).stream()
+        return rules.stream()
                 .filter(rule -> normalizedDescription.contains(rule.getKeyword().toLowerCase(Locale.ROOT)))
                 .map(Rule::getCategory)
                 .findFirst();
