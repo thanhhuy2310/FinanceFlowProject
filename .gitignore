@@ -46,3 +46,4 @@ target/
 *.log
 # TypeScript cache
 *.tsbuildinfo
+.agents/
