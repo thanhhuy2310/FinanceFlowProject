@@ -47,3 +47,4 @@ target/
 # TypeScript cache
 *.tsbuildinfo
 .agents/
+.env
