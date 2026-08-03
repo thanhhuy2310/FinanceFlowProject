@@ -29,6 +29,9 @@ public class Transaction {
     @JoinColumn(name="category_id",nullable = false)
     private Category category;
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="user_id",nullable = false)
+    private User user;
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="import_batch_id")
     private ImportBatch importBatch;
     @Column(name="amount",nullable = false)

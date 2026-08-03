@@ -1,0 +1,37 @@
+services:
+
+  postgres:
+    image: postgres:17
+    container_name: financeflow-db
+
+    restart:  unless-stopped
+
+    environment:
+      POSTGRES_DB: financeflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Kenwiw123
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: financeflow-pgadmin
+
+    restart: always
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@financeflow.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+
+    ports:
+      - "5050:80"
+
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
