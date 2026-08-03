@@ -48,3 +48,4 @@ target/
 *.tsbuildinfo
 .agents/
 .env/
+.env*
