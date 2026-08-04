@@ -1,6 +1,40 @@
-import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import {
+  Banknote,
+  Bike,
+  BookOpen,
+  Briefcase,
+  Bus,
+  Car,
+  Coffee,
+  Coins,
+  CreditCard,
+  Dumbbell,
+  Film,
+  Fuel,
+  Gamepad2,
+  Gift,
+  HeartPulse,
+  House,
+  Landmark,
+  Laptop,
+  Music,
+  PiggyBank,
+  Pill,
+  Plane,
+  School,
+  Scissors,
+  Shirt,
+  ShoppingCart,
+  Smartphone,
+  TrendingUp,
+  Utensils,
+  Wallet,
+  Wifi,
+  Zap,
+} from "lucide-react";
 
+/** Icon names available in the category icon picker (kebab-case, stored on the category). */
 export const CATEGORY_ICONS = [
   "shopping-cart",
   "utensils",
@@ -36,12 +70,40 @@ export const CATEGORY_ICONS = [
   "fuel",
 ] as const;
 
-export const ICON_MAP: Record<string, LucideIcon> = Object.fromEntries(
-  CATEGORY_ICONS.map((name) => [
-    name,
-    (LucideIcons as unknown as Record<string, LucideIcon>)[name],
-  ]),
-);
+export const ICON_MAP: Record<string, LucideIcon> = {
+  "shopping-cart": ShoppingCart,
+  utensils: Utensils,
+  coffee: Coffee,
+  gift: Gift,
+  film: Film,
+  music: Music,
+  "gamepad-2": Gamepad2,
+  shirt: Shirt,
+  bus: Bus,
+  car: Car,
+  bike: Bike,
+  plane: Plane,
+  home: House,
+  zap: Zap,
+  wifi: Wifi,
+  smartphone: Smartphone,
+  briefcase: Briefcase,
+  coins: Coins,
+  banknote: Banknote,
+  "piggy-bank": PiggyBank,
+  "trending-up": TrendingUp,
+  wallet: Wallet,
+  "credit-card": CreditCard,
+  school: School,
+  dumbbell: Dumbbell,
+  "heart-pulse": HeartPulse,
+  pill: Pill,
+  "book-open": BookOpen,
+  laptop: Laptop,
+  landmark: Landmark,
+  scissors: Scissors,
+  fuel: Fuel,
+};
 
 export const CATEGORY_COLORS = [
   "#EF4444",
