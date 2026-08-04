@@ -1,5 +1,6 @@
 package com.financeflow.service;
 
+import com.financeflow.dto.request.rule.RulePreviewRequest;
 import com.financeflow.dto.request.rule.RuleRequest;
 import com.financeflow.dto.response.rule.RuleResponse;
 import com.financeflow.entity.Category;
@@ -246,6 +247,35 @@ class RuleServiceTest {
         assertThatThrownBy(() -> ruleService.update(1L, request))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("already exists");
+    }
+
+    @Test
+    void preview_matchingDescription_returnsMatchedRule() {
+        Category transport = category(1L, "Transport", CategoryType.EXPENSE);
+        List<Rule> rules = List.of(rule(1L, "grab", 1, transport, true));
+
+        when(userRepository.findByEmail(USER_EMAIL)).thenReturn(Optional.of(user));
+        when(ruleRepository.findByUserIdAndIsActiveTrueOrderByPriorityAsc(USER_ID)).thenReturn(rules);
+
+        var response = ruleService.preview(
+                RulePreviewRequest.builder().description("Grab Car ride").build());
+
+        assertThat(response.isMatched()).isTrue();
+        assertThat(response.getKeyword()).isEqualTo("grab");
+        assertThat(response.getCategoryName()).isEqualTo("Transport");
+        assertThat(response.getCategoryId()).isEqualTo(1L);
+    }
+
+    @Test
+    void preview_noMatchingDescription_returnsUnmatched() {
+        when(userRepository.findByEmail(USER_EMAIL)).thenReturn(Optional.of(user));
+        when(ruleRepository.findByUserIdAndIsActiveTrueOrderByPriorityAsc(USER_ID)).thenReturn(List.of());
+
+        var response = ruleService.preview(
+                RulePreviewRequest.builder().description("Netflix subscription").build());
+
+        assertThat(response.isMatched()).isFalse();
+        assertThat(response.getCategoryId()).isNull();
     }
 
     @Test

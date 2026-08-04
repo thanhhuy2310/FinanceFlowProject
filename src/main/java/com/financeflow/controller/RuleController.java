@@ -1,7 +1,9 @@
 package com.financeflow.controller;
 
+import com.financeflow.dto.request.rule.RulePreviewRequest;
 import com.financeflow.dto.request.rule.RuleRequest;
 import com.financeflow.dto.response.ApiResponse;
+import com.financeflow.dto.response.rule.RulePreviewResponse;
 import com.financeflow.dto.response.rule.RuleResponse;
 import com.financeflow.service.RuleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,6 +38,14 @@ public class RuleController {
         RuleResponse rule = ruleService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(rule, "Rule created successfully"));
+    }
+
+    @PostMapping("/preview")
+    @Operation(summary = "Preview which rule matches a description")
+    public ResponseEntity<ApiResponse<RulePreviewResponse>> preview(
+            @Valid @RequestBody RulePreviewRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ruleService.preview(request), "Rule preview computed successfully"));
     }
 
     @GetMapping

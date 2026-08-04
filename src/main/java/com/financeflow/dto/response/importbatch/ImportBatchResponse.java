@@ -23,6 +23,9 @@ public class ImportBatchResponse {
     private Integer totalRows;
     private Integer successRows;
     private Integer failedRows;
+    private Integer skippedRows;
+    /** Import duration in milliseconds, populated when the import has just been executed. */
+    private Long executionTimeMs;
     private ImportBatchStatus status;
     private String errorMessage;
     @Builder.Default

@@ -27,6 +27,8 @@ import com.financeflow.service.CsvTransactionParser.CsvRow;
 import com.financeflow.service.CsvTransactionParser.CsvRowError;
 import com.financeflow.service.CsvTransactionParser.ParseResult;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,12 +42,16 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class ImportBatchService {
+
+    private static final Logger log = LoggerFactory.getLogger(ImportBatchService.class);
 
     private final ImportBatchRepository importBatchRepository;
     private final ImportBatchErrorRepository importBatchErrorRepository;
@@ -69,6 +75,7 @@ public class ImportBatchService {
         importBatch.setTotalRows(0);
         importBatch.setSuccessRows(0);
         importBatch.setFailedRows(0);
+        importBatch.setSkippedRows(0);
         importBatch.setStatus(ImportBatchStatus.PENDING);
 
         return toResponse(importBatchRepository.save(importBatch));
@@ -94,11 +101,13 @@ public class ImportBatchService {
 
     /**
      * Parses an uploaded CSV file and imports every valid row as a transaction.
-     * Rows that cannot be resolved are skipped and recorded as batch failures;
-     * the batch is completed with a summary of the outcome.
+     * Rows that cannot be resolved are recorded as batch failures; rows that
+     * duplicate an already imported reference are skipped; the batch is
+     * completed with a summary of the outcome.
      */
     @Transactional
     public ImportBatchResponse importCsv(Long id, MultipartFile file) {
+        long startedAt = System.nanoTime();
         ImportBatch importBatch = getOwnedImportBatch(id);
         if (importBatch.getStatus() != ImportBatchStatus.PENDING) {
             throw new CsvImportException("Only PENDING import batches can be imported");
@@ -113,16 +122,28 @@ public class ImportBatchService {
         List<Account> accounts = accountRepository.findByUserId(user.getId());
         List<Provider> providers = providerRepository.findAll();
 
+        Set<String> knownReferences = new HashSet<>(
+                transactionRepository.findReferenceByUserId(user.getId()));
+        int skippedRows = 0;
         List<ImportBatchError> failures = new ArrayList<>();
         parseResult.rowErrors().forEach(error ->
-                failures.add(toError(importBatch, error.rowNumber(), error.errorMessage())));
+                failures.add(toError(importBatch, error, error.errorMessage())));
 
         List<Transaction> transactions = new ArrayList<>();
         for (CsvRow row : parseResult.rows()) {
+            if (isDuplicate(row.reference(), knownReferences)) {
+                skippedRows++;
+                continue;
+            }
             try {
-                transactions.add(buildTransaction(importBatch, user, row, rules, categories, providers, accounts));
+                Transaction transaction = buildTransaction(
+                        importBatch, user, row, rules, categories, providers, accounts);
+                transactions.add(transaction);
+                if (row.reference() != null) {
+                    knownReferences.add(row.reference());
+                }
             } catch (CsvImportException ex) {
-                failures.add(toError(importBatch, row.rowNumber(), ex.getMessage()));
+                failures.add(toError(importBatch, row, ex.getMessage()));
             }
         }
 
@@ -131,13 +152,26 @@ public class ImportBatchService {
             importBatchErrorRepository.saveAll(failures);
         }
 
-        importBatch.setTotalRows(transactions.size() + failures.size());
+        importBatch.setTotalRows(transactions.size() + failures.size() + skippedRows);
         importBatch.setSuccessRows(transactions.size());
         importBatch.setFailedRows(failures.size());
+        importBatch.setSkippedRows(skippedRows);
         importBatch.setErrorMessage(null);
         importBatch.setStatus(ImportBatchStatus.COMPLETED);
 
-        return toResponse(importBatch);
+        long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000;
+        log.info("Import batch {} processed: {} total, {} imported, {} failed, {} skipped in {} ms",
+                importBatch.getId(), importBatch.getTotalRows(),
+                transactions.size(), failures.size(), skippedRows, elapsedMs);
+
+        ImportBatchResponse response = toResponse(importBatch);
+        response.setExecutionTimeMs(elapsedMs);
+        return response;
+    }
+
+    /** A row is a duplicate when it carries a reference that was already imported. */
+    private boolean isDuplicate(String reference, Set<String> knownReferences) {
+        return reference != null && knownReferences.contains(reference);
     }
 
     /**
@@ -197,6 +231,7 @@ public class ImportBatchService {
                 .transactionType(row.transactionType())
                 .transactionDate(row.transactionDate())
                 .description(row.description())
+                .reference(row.reference())
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
@@ -209,7 +244,9 @@ public class ImportBatchService {
             category = categories.stream()
                     .filter(c -> c.getName().equalsIgnoreCase(row.categoryName()))
                     .findFirst()
-                    .orElseThrow(() -> new CsvImportException("Category not found: " + row.categoryName()));
+                    .orElseThrow(() -> new CsvImportException(
+                            "Category \"" + row.categoryName() + "\" does not exist. "
+                                    + "Create it first or add a matching rule."));
         }
 
         if (category == null) {
@@ -251,11 +288,24 @@ public class ImportBatchService {
         account.setUpdatedAt(LocalDateTime.now());
     }
 
-    private ImportBatchError toError(ImportBatch importBatch, int rowNumber, String message) {
+    private ImportBatchError toError(ImportBatch importBatch, CsvRowError error, String message) {
         return ImportBatchError.builder()
                 .importBatch(importBatch)
-                .rowNumber(rowNumber)
+                .rowNumber(error.rowNumber())
                 .errorMessage(message)
+                .description(error.description())
+                .categoryName(error.categoryName())
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    private ImportBatchError toError(ImportBatch importBatch, CsvRow row, String message) {
+        return ImportBatchError.builder()
+                .importBatch(importBatch)
+                .rowNumber(row.rowNumber())
+                .errorMessage(message)
+                .description(row.description())
+                .categoryName(row.categoryName())
                 .createdAt(LocalDateTime.now())
                 .build();
     }

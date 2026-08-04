@@ -33,6 +33,8 @@ public class ImportBatch {
     private Integer successRows;
     @Column(name="failed_rows",nullable = false)
     private Integer failedRows;
+    @Column(name="skipped_rows",nullable = false)
+    private Integer skippedRows;
     @Enumerated(EnumType.STRING)
     @Column(name="status",nullable = false,length = 100)
     private ImportBatchStatus status;

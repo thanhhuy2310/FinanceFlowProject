@@ -258,4 +258,93 @@ class CsvTransactionParserTest {
         assertThat(result.rows().get(0).categoryName()).isNull();
         assertThat(result.rows().get(0).providerName()).isNull();
     }
+
+    @Test
+    void parse_aliasHeadersIncludingVietnamese_supported() {
+        String csv = """
+                Ngày,Nội dung,Số tiền,Danh mục,Ngân hàng
+                2026-08-01,Cà phê,-65000,Đồ ăn,Techcombank
+                """;
+
+        ParseResult result = parse(csv);
+
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rowErrors()).isEmpty();
+
+        CsvRow row = result.rows().get(0);
+        assertThat(row.transactionDate()).isEqualTo(LocalDateTime.parse("2026-08-01T00:00"));
+        assertThat(row.description()).isEqualTo("Cà phê");
+        assertThat(row.amount()).isEqualByComparingTo("65000");
+        assertThat(row.transactionType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(row.categoryName()).isEqualTo("Đồ ăn");
+        assertThat(row.providerName()).isEqualTo("Techcombank");
+    }
+
+    @Test
+    void parse_headersWithSurroundingSpaces_supported() {
+        String csv = """
+                 Date , Description , Amount , Type , Category , Provider
+                2026-08-01,Coffee,50000,EXPENSE,Food,Highlands
+                """;
+
+        ParseResult result = parse(csv);
+
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rows().get(0).description()).isEqualTo("Coffee");
+    }
+
+    @Test
+    void parse_unknownColumns_areIgnored() {
+        String csv = """
+                date,description,amount,type,category,provider,location,phone,customer
+                2026-08-01,Coffee,50000,EXPENSE,Food,Highlands,Hanoi,0123,John
+                """;
+
+        ParseResult result = parse(csv);
+
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rowErrors()).isEmpty();
+    }
+
+    @Test
+    void parse_referenceColumn_mapped() {
+        String csv = """
+                date,description,amount,type,category,provider,reference
+                2026-08-01,Coffee,50000,EXPENSE,Food,Highlands,REF-2026-001
+                """;
+
+        ParseResult result = parse(csv);
+
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rows().get(0).reference()).isEqualTo("REF-2026-001");
+    }
+
+    @Test
+    void parse_typeColumnAbsent_derivesTypeFromAmountSign() {
+        String csv = """
+                date,description,amount,category,provider
+                2026-08-01,Coffee,-65000,Food,Highlands
+                2026-08-02,Salary,15000000,Salary,Techcombank
+                """;
+
+        ParseResult result = parse(csv);
+
+        assertThat(result.rows()).hasSize(2);
+        assertThat(result.rows().get(0).transactionType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(result.rows().get(1).transactionType()).isEqualTo(TransactionType.INCOME);
+    }
+
+    @Test
+    void parse_missingRequiredColumn_throwsWithSupportedNames() {
+        String csv = """
+                date,description,type,category,provider
+                2026-08-01,Coffee,50000,EXPENSE,Food
+                """;
+
+        assertThatThrownBy(() -> parse(csv))
+                .isInstanceOf(CsvImportException.class)
+                .hasMessageContaining("Invalid CSV header")
+                .hasMessageContaining("required column \"Amount\" was not found")
+                .hasMessageContaining("Supported names: Amount, Money, Value, Số tiền");
+    }
 }

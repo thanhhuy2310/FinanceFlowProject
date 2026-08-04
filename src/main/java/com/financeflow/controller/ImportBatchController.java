@@ -8,7 +8,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -44,6 +47,22 @@ public class ImportBatchController {
     public ResponseEntity<ApiResponse<List<ImportBatchResponse>>> findAll() {
         return ResponseEntity.ok(ApiResponse.success(
                 importBatchService.findAll(), "Import batches retrieved successfully"));
+    }
+
+    @GetMapping("/template")
+    @Operation(summary = "Download a CSV template showing the expected columns")
+    public ResponseEntity<byte[]> downloadTemplate() {
+        String template = """
+                Date,Description,Amount,Type,Category,Provider,Reference
+                2026-08-01,Coffee,65000,EXPENSE,Food,Highlands,
+                2026-08-02,Monthly salary,15000000,INCOME,Salary,Techcombank,
+                """;
+        byte[] content = template.getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=financeflow-import-template.csv")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .contentLength(content.length)
+                .body(content);
     }
 
     @GetMapping("/{id}")

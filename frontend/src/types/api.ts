@@ -1,21 +1,44 @@
-export type ApiResponse<T> = { success: boolean; message: string; data: T };
+// API envelope
 
-export type User = {
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+// Auth
+
+export interface User {
   id?: number;
   fullName: string;
   email: string;
   role?: string;
   createdAt?: string;
-};
+}
 
-export type LoginResponse = { token: string; user: User };
+export interface LoginResponse {
+  token: string;
+  user: User;
+}
+
+// Shared enums
 
 export type AccountType = "BANK" | "CASH" | "EWALLET" | "CREDIT_CARD";
 export type CategoryType = "INCOME" | "EXPENSE";
 export type TransactionType = CategoryType;
+export type ImportBatchStatus = "PENDING" | "COMPLETED" | "FAILED";
 
-export type Provider = { id: number; name: string; logoUrl?: string | null };
-export type Account = {
+// Providers
+
+export interface Provider {
+  id: number;
+  name: string;
+  logoUrl?: string | null;
+}
+
+// Accounts
+
+export interface Account {
   id: number;
   providerId: number;
   accountName: string;
@@ -25,10 +48,16 @@ export type Account = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-};
-export type AccountPayload = Pick<Account, "accountName" | "accountNumber" | "accountType" | "providerId" | "balance">;
+}
 
-export type Category = {
+export type AccountPayload = Pick<
+  Account,
+  "accountName" | "accountNumber" | "accountType" | "providerId" | "balance"
+>;
+
+// Categories
+
+export interface Category {
   id: number;
   name: string;
   type: CategoryType;
@@ -36,10 +65,13 @@ export type Category = {
   color?: string | null;
   createdAt: string;
   updatedAt: string;
-};
+}
+
 export type CategoryPayload = Pick<Category, "name" | "type" | "icon" | "color">;
 
-export type Transaction = {
+// Transactions
+
+export interface Transaction {
   id: number;
   amount: number;
   description?: string | null;
@@ -50,10 +82,16 @@ export type Transaction = {
   categoryId: number;
   categoryName: string;
   createdAt: string;
-};
-export type TransactionPayload = Pick<Transaction, "amount" | "description" | "transactionDate" | "transactionType" | "accountId" | "categoryId">;
+}
 
-export type Rule = {
+export type TransactionPayload = Pick<
+  Transaction,
+  "amount" | "description" | "transactionDate" | "transactionType" | "accountId" | "categoryId"
+>;
+
+// Rules
+
+export interface Rule {
   id: number;
   keyword: string;
   categoryId: number;
@@ -62,11 +100,18 @@ export type Rule = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-};
+}
+
 export type RulePayload = Pick<Rule, "keyword" | "categoryId" | "priority" | "isActive">;
 
-export type CategoryAmount = { categoryName: string; totalAmount: number };
-export type Dashboard = {
+// Dashboard
+
+export interface CategoryAmount {
+  categoryName: string;
+  totalAmount: number;
+}
+
+export interface Dashboard {
   totalBalance: number;
   totalIncome: number;
   totalExpense: number;
@@ -74,24 +119,46 @@ export type Dashboard = {
   incomeByCategory: CategoryAmount[];
   expenseByCategory: CategoryAmount[];
   recentTransactions: Transaction[];
-};
+}
 
-export type ImportBatchStatus = "PENDING" | "COMPLETED" | "FAILED";
-export type ImportRowFailure = {
+// Import batches
+
+export interface ImportRowFailure {
   id: number;
   rowNumber: number;
   errorMessage: string;
+  /** Description found in the CSV row, when available. */
+  description?: string | null;
+  /** Category name found in the CSV row, when available. */
+  categoryName?: string | null;
   createdAt: string;
-};
-export type ImportBatch = {
+}
+
+export interface ImportBatch {
   id: number;
   fileName: string;
   importedAt: string;
   totalRows: number;
   successRows: number;
   failedRows: number;
+  skippedRows: number;
+  /** Import duration in milliseconds, populated right after an upload. */
+  executionTimeMs?: number | null;
   status: ImportBatchStatus;
   errorMessage?: string | null;
   failures: ImportRowFailure[];
-};
-export type ImportBatchPayload = { fileName: string };
+}
+
+export interface ImportBatchPayload {
+  fileName: string;
+}
+
+// Rule preview
+
+export interface RulePreview {
+  matched: boolean;
+  ruleId?: number | null;
+  keyword?: string | null;
+  categoryId?: number | null;
+  categoryName?: string | null;
+}

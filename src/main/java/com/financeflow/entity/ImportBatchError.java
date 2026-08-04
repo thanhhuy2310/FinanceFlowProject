@@ -40,6 +40,14 @@ public class ImportBatchError {
     @Column(name = "error_message", nullable = false)
     private String errorMessage;
 
+    /** The description found in the CSV row, when available (for better error reports). */
+    @Column(name = "description")
+    private String description;
+
+    /** The category name found in the CSV row, when available (for better error reports). */
+    @Column(name = "category_name")
+    private String categoryName;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 }

@@ -15,11 +15,13 @@ public interface ImportBatchMapper {
     @Mapping(target = "totalRows", ignore = true)
     @Mapping(target = "successRows", ignore = true)
     @Mapping(target = "failedRows", ignore = true)
+    @Mapping(target = "skippedRows", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "errorMessage", ignore = true)
     @Mapping(target = "transactions", ignore = true)
     ImportBatch toEntity(ImportBatchRequest request);
 
     @Mapping(target = "failures", ignore = true)
+    @Mapping(target = "executionTimeMs", ignore = true)
     ImportBatchResponse toResponse(ImportBatch importBatch);
 }

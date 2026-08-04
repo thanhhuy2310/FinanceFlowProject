@@ -92,6 +92,7 @@ class ImportBatchServiceTest {
     private Category food;
     private Category transport;
     private Category salary;
+    private List<String> existingReferences = List.of();
 
     @BeforeEach
     void setUp() {
@@ -118,6 +119,8 @@ class ImportBatchServiceTest {
         });
         lenient().when(importBatchErrorRepository.findByImportBatchId(any()))
                 .thenAnswer(invocation -> List.copyOf(savedErrors));
+        lenient().when(transactionRepository.findReferenceByUserId(USER_ID))
+                .thenAnswer(invocation -> existingReferences);
     }
 
     @AfterEach
@@ -236,7 +239,9 @@ class ImportBatchServiceTest {
         assertThat(response.getFailures()).hasSize(2);
         assertThat(response.getFailures().get(0).getRowNumber()).isEqualTo(4);
         assertThat(response.getFailures().get(0).getErrorMessage()).contains("Invalid amount");
-        assertThat(response.getFailures().get(1).getErrorMessage()).contains("Category not found");
+        assertThat(response.getFailures().get(1).getErrorMessage()).contains("does not exist");
+        assertThat(response.getFailures().get(1).getDescription()).isEqualTo("Shopping");
+        assertThat(response.getFailures().get(1).getCategoryName()).isEqualTo("Unknown");
 
         ArgumentCaptor<List<ImportBatchError>> errorCaptor = ArgumentCaptor.forClass(List.class);
         verify(importBatchErrorRepository).saveAll(errorCaptor.capture());
@@ -379,6 +384,52 @@ class ImportBatchServiceTest {
 
         assertThat(batch.getFailedRows()).isEqualTo(1);
         assertThat(response.getFailures().get(0).getErrorMessage()).contains("Insufficient account balance");
+    }
+
+    @Test
+    void importCsv_duplicateReference_skipsRow() {
+        ImportBatch batch = pendingBatch();
+        stubOwnershipAndLookup(batch);
+        existingReferences = List.of("REF-2026-001");
+
+        String csv = """
+                date,description,amount,type,category,provider,reference
+                2026-08-01,Coffee,50000,EXPENSE,Food,Techcombank,REF-2026-001
+                """;
+
+        ImportBatchResponse response = importBatchService.importCsv(BATCH_ID, csvFile(csv));
+
+        assertThat(batch.getStatus()).isEqualTo(ImportBatchStatus.COMPLETED);
+        assertThat(batch.getTotalRows()).isEqualTo(1);
+        assertThat(batch.getSuccessRows()).isZero();
+        assertThat(batch.getSkippedRows()).isEqualTo(1);
+        assertThat(batch.getFailedRows()).isZero();
+        assertThat(response.getSkippedRows()).isEqualTo(1);
+        assertThat(account.getBalance()).isEqualByComparingTo("10000000");
+    }
+
+    @Test
+    void importCsv_duplicateWithinSameFile_skipsLaterRow() {
+        ImportBatch batch = pendingBatch();
+        stubOwnershipAndLookup(batch);
+        when(ruleRepository.findByUserIdAndIsActiveTrueOrderByPriorityAsc(USER_ID)).thenReturn(List.of());
+        when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(food));
+        when(accountRepository.findByUserId(USER_ID)).thenReturn(List.of(account));
+        when(providerRepository.findAll()).thenReturn(List.of(techcombank));
+        when(ruleService.matchCategory(any(), any())).thenReturn(Optional.empty());
+
+        String csv = """
+                date,description,amount,type,category,provider,reference
+                2026-08-01,Coffee,50000,EXPENSE,Food,Techcombank,REF-2026-002
+                2026-08-02,Coffee 2,60000,EXPENSE,Food,Techcombank,REF-2026-002
+                """;
+
+        ImportBatchResponse response = importBatchService.importCsv(BATCH_ID, csvFile(csv));
+
+        assertThat(batch.getTotalRows()).isEqualTo(2);
+        assertThat(batch.getSuccessRows()).isEqualTo(1);
+        assertThat(batch.getSkippedRows()).isEqualTo(1);
+        assertThat(response.getFailures()).isEmpty();
     }
 
     @Test

@@ -1,6 +1,8 @@
 package com.financeflow.service;
 
+import com.financeflow.dto.request.rule.RulePreviewRequest;
 import com.financeflow.dto.request.rule.RuleRequest;
+import com.financeflow.dto.response.rule.RulePreviewResponse;
 import com.financeflow.dto.response.rule.RuleResponse;
 import com.financeflow.entity.Category;
 import com.financeflow.entity.Rule;
@@ -65,10 +67,33 @@ public class RuleService {
     }
 
     /**
-     * Returns the category of the first active rule (ordered by priority ascending)
-     * whose keyword is contained in the description, if any.
+     * Preview how a description would be categorised: returns the matched rule
+     * (with its category) or an unmatched response, without saving anything.
      */
-    public Optional<Category> matchCategory(List<Rule> rules, String description) {
+    @Transactional(readOnly = true)
+    public RulePreviewResponse preview(RulePreviewRequest request) {
+        User currentUser = getCurrentUser();
+        List<Rule> rules = ruleRepository.findByUserIdAndIsActiveTrueOrderByPriorityAsc(currentUser.getId());
+        String description = request.getDescription().trim();
+
+        return matchRule(rules, description)
+                .map(rule -> RulePreviewResponse.builder()
+                        .matched(true)
+                        .ruleId(rule.getId())
+                        .keyword(rule.getKeyword())
+                        .categoryId(rule.getCategory().getId())
+                        .categoryName(rule.getCategory().getName())
+                        .build())
+                .orElseGet(() -> RulePreviewResponse.builder()
+                        .matched(false)
+                        .build());
+    }
+
+    /**
+     * Returns the first active rule (ordered by priority ascending) whose keyword
+     * is contained in the description, if any.
+     */
+    public Optional<Rule> matchRule(List<Rule> rules, String description) {
         if (description == null || description.isBlank() || rules == null || rules.isEmpty()) {
             return Optional.empty();
         }
@@ -77,8 +102,15 @@ public class RuleService {
 
         return rules.stream()
                 .filter(rule -> normalizedDescription.contains(rule.getKeyword().toLowerCase(Locale.ROOT)))
-                .map(Rule::getCategory)
                 .findFirst();
+    }
+
+    /**
+     * Returns the category of the first active rule (ordered by priority ascending)
+     * whose keyword is contained in the description, if any.
+     */
+    public Optional<Category> matchCategory(List<Rule> rules, String description) {
+        return matchRule(rules, description).map(Rule::getCategory);
     }
 
     @Transactional
